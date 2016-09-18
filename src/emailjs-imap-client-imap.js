@@ -244,16 +244,16 @@
                 request: request,
                 payload: acceptUntagged.length ? {} : undefined,
                 callback: (response) => {
+                    var responseCommand = (response && response.command || '').toString().toUpperCase().trim();
                     if (this.isError(response)) {
                         return reject(response);
-                    } else if (['NO', 'BAD'].indexOf((response && response.command || '').toString().toUpperCase().trim()) >= 0) {
+                    } else if (responseCommand === 'BAD' || (responseCommand === 'NO' && response.code !== 'UNAVAILABLE')) {
                         var error = new Error(response.humanReadable || 'Error');
                         if (response.code) {
                             error.code = response.code;
                         }
                         return reject(error);
                     }
-
                     resolve(response);
                 }
             };
