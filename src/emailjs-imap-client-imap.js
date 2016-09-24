@@ -271,7 +271,7 @@
                 data.tag += '.p';
                 data.request.tag += '.p';
                 this._clientQueue.splice(index, 0, data);
-            } else if (options && options.priority) {
+            } else if (options.priority) {
               data.tag += '.p';
               data.request.tag += '.p';
               this._clientQueue.splice(0, 0, data);
