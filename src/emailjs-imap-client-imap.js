@@ -271,10 +271,6 @@
                 data.tag += '.p';
                 data.request.tag += '.p';
                 this._clientQueue.splice(index, 0, data);
-            } else if (options.priority) {
-              data.tag += '.p';
-              data.request.tag += '.p';
-              this._clientQueue.splice(0, 0, data);
             } else {
                 this._clientQueue.push(data);
             }

@@ -413,8 +413,7 @@
         this.logger.debug('Fetching messages', sequence, 'from', path, '...');
         var command = this._buildFETCHCommand(sequence, items, options);
         return this.exec(command, 'FETCH', {
-            precheck: (ctx) => (this._selectedMailbox === path) ? Promise.resolve() : this.selectMailbox(path, { ctx: ctx }),
-            priority: options.priority || false
+            precheck: (ctx) => (this._selectedMailbox === path) ? Promise.resolve() : this.selectMailbox(path, { ctx: ctx })
         }).then((response) => this._parseFETCH(response));
     };
 
