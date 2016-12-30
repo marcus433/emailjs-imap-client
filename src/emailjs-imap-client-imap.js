@@ -475,8 +475,8 @@
         } else if (response.tag === '*' && command in this._globalAcceptUntagged) {
             // unexpected untagged response
             this._globalAcceptUntagged[command](response);
-            this._canSend = true;
-            this._sendRequest();
+            //this._canSend = true;
+            //this._sendRequest();
         } else if (response.tag === this._currentCommand.tag) {
             // tagged response
             if (this._currentCommand.payload && Object.keys(this._currentCommand.payload).length) {
