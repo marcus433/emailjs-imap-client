@@ -282,6 +282,34 @@
     };
 
     /**
+     *
+     * @param commands
+     * @param ctx
+     * @returns {*}
+     */
+    Imap.prototype.getPreviouslyQueued = function(commands, ctx) {
+        const startIndex = this._clientQueue.indexOf(ctx) - 1;
+
+        // search backwards for the commands and return the first found
+        for (let i = startIndex; i >= 0; i--) {
+            if (isMatch(this._clientQueue[i])) {
+                return this._clientQueue[i];
+            }
+        }
+
+        // also check current command if no SELECT is queued
+        if (isMatch(this._currentCommand)) {
+            return this._currentCommand;
+        }
+
+        return false;
+
+        function isMatch(data) {
+            return data && data.request && commands.indexOf(data.request.command) >= 0;
+        }
+    };
+
+    /**
      * Send data to the TCP socket
      * Arms a timeout waiting for a response from the server.
      *
@@ -469,8 +497,6 @@
         } else if (response.tag === '*' && command in this._globalAcceptUntagged) {
             // unexpected untagged response
             this._globalAcceptUntagged[command](response);
-            this._canSend = true;
-            this._sendRequest();
         } else if (response.tag === this._currentCommand.tag) {
             // tagged response
             if (this._currentCommand.payload && Object.keys(this._currentCommand.payload).length) {

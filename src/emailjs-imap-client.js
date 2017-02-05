@@ -220,6 +220,22 @@
         });
     };
 
+    Client.prototype._shouldSelectMailbox = function(path, ctx) {
+        if (!ctx) {
+          return true;
+        }
+
+        const previousSelect = this.client.getPreviouslyQueued(['SELECT', 'EXAMINE'], ctx);
+        if (previousSelect && previousSelect.request.attributes) {
+            const pathAttribute = previousSelect.request.attributes.find((attribute) => attribute.type === 'STRING');
+            if (pathAttribute) {
+                return pathAttribute.value !== path;
+            }
+        }
+
+        return this._selectedMailbox !== path;
+    };
+
     /**
      * Runs SELECT or EXAMINE to open a mailbox
      *
@@ -414,7 +430,7 @@
         this.logger.debug('Fetching messages', sequence, 'from', path, '...');
         var command = this._buildFETCHCommand(sequence, items, options);
         return this.exec(command, 'FETCH', {
-            precheck: (ctx) => (this._selectedMailbox === path) ? Promise.resolve() : this.selectMailbox(path, { ctx: ctx })
+            precheck: (ctx) => this._shouldSelectMailbox(path, ctx) ? this.selectMailbox(path, { ctx }) : Promise.resolve()
         }).then((response) => this._parseFETCH(response));
     };
 
@@ -435,7 +451,7 @@
         this.logger.debug('Searching in', path, '...');
         var command = this._buildSEARCHCommand(query, options);
         return this.exec(command, 'SEARCH', {
-            precheck: (ctx) => (this._selectedMailbox === path) ? Promise.resolve() : this.selectMailbox(path, { ctx: ctx })
+            precheck: (ctx) => this._shouldSelectMailbox(path, ctx) ? this.selectMailbox(path, { ctx }) : Promise.resolve()
         }).then((response) => this._parseSEARCH(response));
     };
 
@@ -491,7 +507,7 @@
 
         var command = this._buildSTORECommand(sequence, action, flags, options);
         return this.exec(command, 'FETCH', {
-            precheck: (ctx) => (this._selectedMailbox === path) ? Promise.resolve() : this.selectMailbox(path, { ctx: ctx })
+            precheck: (ctx) => this._shouldSelectMailbox(path, ctx) ? this.selectMailbox(path, { ctx }) : Promise.resolve()
         }).then((response) => this._parseFETCH(response));
     };
 
@@ -573,7 +589,7 @@
                 cmd = 'EXPUNGE';
             }
             return this.exec(cmd, null, {
-                precheck: (ctx) => (this._selectedMailbox === path) ? Promise.resolve() : this.selectMailbox(path, { ctx: ctx })
+                precheck: (ctx) => this._shouldSelectMailbox(path, ctx) ? this.selectMailbox(path, { ctx }) : Promise.resolve()
             });
         });
     };
@@ -606,7 +622,7 @@
                 value: destination
             }]
         }, null, {
-            precheck: (ctx) => (this._selectedMailbox === path) ? Promise.resolve() : this.selectMailbox(path, { ctx: ctx })
+            precheck: (ctx) => this._shouldSelectMailbox(path, ctx) ? this.selectMailbox(path, { ctx }) : Promise.resolve()
         }).then((response) => (response.humanReadable || 'COPY completed'));
     };
 
@@ -647,7 +663,7 @@
                 value: destination
             }]
         }, ['OK'], {
-            precheck: (ctx) => (this._selectedMailbox === path) ? Promise.resolve() : this.selectMailbox(path, { ctx: ctx })
+            precheck: (ctx) => this._shouldSelectMailbox(path, ctx) ? this.selectMailbox(path, { ctx }) : Promise.resolve()
         });
     };
 
@@ -775,9 +791,8 @@
      * @param {Array} acceptUntagged a list of untagged responses that will be included in 'payload' property
      */
     Client.prototype.exec = function(request, acceptUntagged, options) {
-        return this.breakIdle().then(() => {
-            return this.client.enqueueCommand(request, acceptUntagged, options);
-        }).then((response) => {
+        this.breakIdle();
+        return this.client.enqueueCommand(request, acceptUntagged, options).then((response) => {
             if (response && response.capability) {
                 this._capability = response.capability;
             }
@@ -834,7 +849,7 @@
      */
     Client.prototype.breakIdle = function() {
         if (!this._enteredIdle) {
-            return Promise.resolve();
+            return;
         }
 
         clearTimeout(this._idleTimeout);
@@ -843,9 +858,6 @@
             this.logger.debug('Idle terminated');
         }
         this._enteredIdle = false;
-
-
-        return Promise.resolve();
     };
 
     /**
