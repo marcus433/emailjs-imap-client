@@ -154,9 +154,16 @@
      *
      * @returns {Promise} Resolves when the socket is closed
      */
-    Imap.prototype.close = function() {
+    Imap.prototype.close = function(error) {
         return new Promise((resolve) => {
             var tearDown = () => {
+
+                // fulfill pending promises
+                this._clientQueue.forEach(cmd => cmd.callback(error));
+                if (this._currentCommand) {
+                    this._currentCommand.callback(error);
+                }
+
                 this._clientQueue = [];
                 this._currentCommand = false;
 
@@ -203,7 +210,7 @@
     Imap.prototype.logout = function() {
         return new Promise((resolve, reject) => {
             this.socket.onclose = this.socket.onerror = () => {
-                this.close().then(resolve).catch(reject);
+                this.close("Client logging out").then(resolve).catch(reject);
             };
 
             this.enqueueCommand('LOGOUT');
@@ -368,7 +375,7 @@
         this.logger.error(error);
 
         // always call onerror callback, no matter if close() succeeds or fails
-        this.close().then(() => {
+        this.close(error).then(() => {
             this.onerror && this.onerror(error);
         }, () => {
             this.onerror && this.onerror(error);
@@ -465,7 +472,7 @@
             var response;
             try {
                 response = imapHandler.parser(command.trim());
-                this.logger.debug('S:', imapHandler.compiler(response, false, true));
+                this.logger.debug('S:', () => imapHandler.compiler(response, false, true));
             } catch (e) {
                 this.logger.error('Error parsing imap command!', response);
                 return this._onError(e);
@@ -565,7 +572,7 @@
 
         try {
             this._currentCommand.data = imapHandler.compiler(this._currentCommand.request, true);
-            this.logger.debug('C:', imapHandler.compiler(this._currentCommand.request, false, true)); // excludes passwords etc.
+            this.logger.debug('C:', () => imapHandler.compiler(this._currentCommand.request, false, true)); // excludes passwords etc.
         } catch (e) {
             this.logger.error('Error compiling imap command!', this._currentCommand.request);
             return this._onError(new Error('Error compiling imap command!'));

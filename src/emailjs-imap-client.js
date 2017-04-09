@@ -128,7 +128,7 @@
             this.client.onerror = this._onError.bind(this);
         }).catch((err) => {
             this.logger.error('Could not connect to server', err);
-            this.close(); // we don't really care whether this works or not
+            this.close(err); // we don't really care whether this works or not
             throw err;
         });
     };
@@ -158,11 +158,11 @@
      *
      * @returns {Promise} Resolves when socket is closed
      */
-    Client.prototype.close = function() {
+    Client.prototype.close = function(err) {
         this._changeState(this.STATE_LOGOUT);
         clearTimeout(this._idleTimeout);
         this.logger.debug('Closing connection...');
-        return this.client.close();
+        return this.client.close(err);
     };
 
     /**
@@ -1849,15 +1849,9 @@
     Client.prototype.createLogger = function() {
         var createLogger = (tag) => {
             var log = (level, messages) => {
-                messages.map((message) => {
-                    try {
-                        return typeof message.toString === 'function' ? message.toString() : JSON.stringify(message);
-                    } catch (e) {
-                        return message; // use JS builtin interpolation
-                    }
-                });
-
-                var logMessage = '[' + new Date().toISOString() + '][' + tag + '] ' + messages.join(' ');
+                messages = messages.map(msg => typeof msg === 'function' ? msg() : msg);
+                var logMessage = '[' + new Date().toISOString() + '][' + tag + '][' +
+                    this.options.auth.user + '][' + this.client.host  + '] ' + messages.join(' ');
                 if (level === this.LOG_LEVEL_DEBUG) {
                    console.log('[DEBUG]' + logMessage);
                 } else if (level === this.LOG_LEVEL_INFO) {
