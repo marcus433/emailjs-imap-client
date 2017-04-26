@@ -1571,6 +1571,7 @@
                             // and they must not be quoted strings or the server
                             // will report a parse error.
                         case 'x-gm-thrid':
+                        case 'x-gm-raw':
                         case 'x-gm-msgid':
                             param = {
                                 type: "number",
