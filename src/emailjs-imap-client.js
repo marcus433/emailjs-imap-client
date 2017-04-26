@@ -1572,6 +1572,11 @@
                             // will report a parse error.
                         case 'x-gm-thrid':
                         case 'x-gm-raw':
+                            param = {
+                                type: "string",
+                                value: param
+                            };
+                            break;
                         case 'x-gm-msgid':
                             param = {
                                 type: "number",
